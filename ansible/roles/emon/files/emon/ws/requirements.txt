@@ -1,0 +1,5 @@
+bs4
+lxml
+html5lib
+prometheus_client
+requests

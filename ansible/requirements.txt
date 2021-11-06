@@ -1,0 +1,5 @@
+websocket-client<1,>=0.32.0
+docker
+docker-compose
+wheel
+ansible

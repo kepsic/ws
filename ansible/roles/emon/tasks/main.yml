@@ -1,0 +1,50 @@
+---
+# tasks file for emon
+- name: Tear down existing services
+  community.docker.docker_compose:
+    project_src: "{{role_path}}/files/emon"
+    state: absent
+
+- name: Create and start services
+  community.docker.docker_compose:
+    project_src: "{{role_path}}/files/emon"
+  register: output
+
+- name: Create additional grafana Org.
+  ignore_errors: yes
+  uri:
+     url: http://localhost:3000/api/orgs
+     user: admin
+     password: "{{ GRAFANA_ADMIN_PASSWORD }}"
+     method: POST
+     body: {"name": "Emon" }
+     force_basic_auth: yes
+     body_format: json
+  register: _result
+
+- name: "Update Grafana dashboard"
+  template:
+    src: "{{role_path}}/templates/dashboard.j2"
+    dest: "{{role_path}}/files/emon/grafana/provisioning/dashboards/dashboard.yml"
+  when: _result.status == 200
+
+- name: "Update Grafana datasource"
+  template:
+    src: "{{role_path}}/templates/datasource.j2"
+    dest: "{{role_path}}/files/emon/grafana/provisioning/datasources/datasource.yml"
+  when: _result.status == 200
+
+- name: Restart services
+  community.docker.docker_compose:
+    project_src: "{{role_path}}/files/emon"
+    build: no
+    restarted: yes
+  register: output
+  when: _result.status == 200
+
+- ansible.builtin.debug:
+    var: output
+
+
+- debug:
+    msg: "{{ output }}"

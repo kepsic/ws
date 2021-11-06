@@ -1,0 +1,3 @@
+---
+# defaults file for emon
+GRAFANA_ADMIN_PASSWORD: "{{ lookup('env', 'GRAFANA_ADMIN_PASSWORD') | default('super', True) }}"
