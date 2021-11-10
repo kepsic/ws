@@ -8,31 +8,37 @@
         "hide": true,
         "iconColor": "rgba(0, 211, 255, 1)",
         "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
         "type": "dashboard"
       }
     ]
   },
-  "editable": false,
+  "editable": true,
   "fiscalYearStartMonth": 0,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 4,
-  "iteration": 1636304321228,
+  "iteration": 1636560704736,
   "links": [],
   "liveNow": false,
   "panels": [
     {
       "collapsed": false,
-      "datasource": "Prometheus",
+      "datasource": null,
       "gridPos": {
         "h": 1,
         "w": 24,
         "x": 0,
         "y": 0
       },
-      "id": 6,
+      "id": 19,
       "panels": [],
-      "title": "Stats",
+      "repeat": "ws_location",
+      "title": "$ws_location",
       "type": "row"
     },
     {
@@ -60,7 +66,7 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 9,
+        "h": 7,
         "w": 6,
         "x": 0,
         "y": 1
@@ -87,7 +93,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "ws_metrics{desc=\"$ws_metrics\"}",
+          "expr": "ws_metrics{desc=\"$ws_metrics\",location=\"$ws_location\"}",
           "interval": "",
           "legendFormat": "$ws_metrics",
           "refId": "A"
@@ -95,20 +101,6 @@
       ],
       "title": "$ws_metrics",
       "type": "stat"
-    },
-    {
-      "collapsed": false,
-      "datasource": "Prometheus",
-      "gridPos": {
-        "h": 1,
-        "w": 24,
-        "x": 0,
-        "y": 28
-      },
-      "id": 4,
-      "panels": [],
-      "title": "Graphs",
-      "type": "row"
     },
     {
       "datasource": null,
@@ -163,10 +155,10 @@
         "overrides": []
       },
       "gridPos": {
-        "h": 9,
-        "w": 8,
+        "h": 8,
+        "w": 6,
         "x": 0,
-        "y": 29
+        "y": 8
       },
       "id": 2,
       "maxPerRow": 3,
@@ -185,7 +177,7 @@
       "targets": [
         {
           "exemplar": true,
-          "expr": "ws_metrics{desc=\"$ws_metrics\"}",
+          "expr": "ws_metrics{desc=\"$ws_metrics\",location=\"$ws_location\"}",
           "interval": "",
           "legendFormat": "$ws_metrics",
           "refId": "A"
@@ -204,28 +196,8 @@
         "allValue": null,
         "current": {
           "selected": true,
-          "text": [
-            "Current UV Index",
-            "Current air pressure",
-            "Current air temperature",
-            "Current precipitations",
-            "Current relative humidity",
-            "Current visibility",
-            "Current wind speed",
-            "Wind direction",
-            "Wind gust"
-          ],
-          "value": [
-            "Current UV Index",
-            "Current air pressure",
-            "Current air temperature",
-            "Current precipitations",
-            "Current relative humidity",
-            "Current visibility",
-            "Current wind speed",
-            "Wind direction",
-            "Wind gust"
-          ]
+          "text": [],
+          "value": []
         },
         "datasource": "Prometheus",
         "definition": "ws_metrics",
@@ -243,6 +215,37 @@
         },
         "refresh": 1,
         "regex": "/desc=\"(.*)\",instance=.*/",
+        "skipUrlSync": false,
+        "sort": 0,
+        "type": "query"
+      },
+      {
+        "allValue": null,
+        "current": {
+          "selected": true,
+          "text": [
+            "Tallinn-Harku"
+          ],
+          "value": [
+            "Tallinn-Harku"
+          ]
+        },
+        "datasource": "Prometheus",
+        "definition": "ws_metrics",
+        "description": null,
+        "error": null,
+        "hide": 0,
+        "includeAll": false,
+        "label": "Location",
+        "multi": true,
+        "name": "ws_location",
+        "options": [],
+        "query": {
+          "query": "ws_metrics",
+          "refId": "StandardVariableQuery"
+        },
+        "refresh": 1,
+        "regex": "/location=\"(.*)\",name=.*/",
         "skipUrlSync": false,
         "sort": 0,
         "type": "query"
@@ -281,5 +284,5 @@
   "timezone": "browser",
   "title": "WS Data",
   "uid": "WkcKcR57z",
-  "version": 7
+  "version": 2
 }

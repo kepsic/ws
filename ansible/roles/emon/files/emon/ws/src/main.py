@@ -41,7 +41,7 @@ class AppMetrics:
 
         # Fetch raw status data from the application
         # weather_station = os.getenv("EMHI_STATION", "Tallinn-Harku")
-        ws_data = emhi_xml(weather_station)
+        ws_data = emhi_xml()
         for ws in ws_data:
             weather_station = ws['name']
             for key, value in ws.items():
@@ -49,7 +49,7 @@ class AppMetrics:
                     continue
                 value=ws_data.get(key,0)
                 self.gauge.labels(key, weather_station, desc[1]).set(value)
-                print(f"{weather_station},{key}={value}=>{desc[1]}")
+                print(f"{weather_station}, {key}={value}=>{desc[1]}")
 
 def main():
     """Main entry point"""
