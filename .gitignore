@@ -37,4 +37,4 @@ venv
 *.b64.sh
 id_rsa*
 */settings.d/*
-*/certbot/*
+*certbot/*
