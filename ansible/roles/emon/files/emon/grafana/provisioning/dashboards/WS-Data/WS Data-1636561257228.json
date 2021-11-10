@@ -22,7 +22,7 @@
   "fiscalYearStartMonth": 0,
   "gnetId": null,
   "graphTooltip": 0,
-  "iteration": 1636560704736,
+  "iteration": 1636564893202,
   "links": [],
   "liveNow": false,
   "panels": [
@@ -156,9 +156,9 @@
       },
       "gridPos": {
         "h": 8,
-        "w": 6,
+        "w": 8,
         "x": 0,
-        "y": 8
+        "y": 22
       },
       "id": 2,
       "maxPerRow": 3,
@@ -196,8 +196,28 @@
         "allValue": null,
         "current": {
           "selected": true,
-          "text": [],
-          "value": []
+          "text": [
+            "Current UV Index",
+            "Current air pressure",
+            "Current air temperature",
+            "Current precipitations",
+            "Current relative humidity",
+            "Current visibility",
+            "Current wind speed",
+            "Wind direction",
+            "Wind gust"
+          ],
+          "value": [
+            "Current UV Index",
+            "Current air pressure",
+            "Current air temperature",
+            "Current precipitations",
+            "Current relative humidity",
+            "Current visibility",
+            "Current wind speed",
+            "Wind direction",
+            "Wind gust"
+          ]
         },
         "datasource": "Prometheus",
         "definition": "ws_metrics",
@@ -282,7 +302,7 @@
     ]
   },
   "timezone": "browser",
-  "title": "Estonian wheather stations",
+  "title": "Estonian weather stations",
   "uid": "WkcKcR57z",
-  "version": 2
+  "version": 1
 }
