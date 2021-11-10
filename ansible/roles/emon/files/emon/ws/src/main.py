@@ -44,12 +44,14 @@ class AppMetrics:
         ws_data = emhi_xml()
         for ws in ws_data:
             weather_station = ws['name']
-            for key, value in ws.items():
+            for key, value in metrics.items():
                 if weather_station == value:
                     continue
-                value=ws_data.get(key,0)
-                self.gauge.labels(key, weather_station, desc[1]).set(value)
-                print(f"{weather_station}, {key}={value}=>{desc[1]}")
+                metric_value=ws.get(key,0)
+                if not metric_value:
+                    continue
+                self.gauge.labels(key, weather_station, value[1]).set(metric_value)
+                print(f"{weather_station}, {key}={metric_value}=>{value[1]}")
 
 def main():
     """Main entry point"""

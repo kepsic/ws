@@ -38,3 +38,4 @@ venv
 id_rsa*
 */settings.d/*
 *certbot/*
+*certbot.pem*
