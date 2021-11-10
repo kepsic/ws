@@ -164,7 +164,7 @@ services:
     ports:
       - 9101:9101
     environment:
-      - POLLING_INTERVAL_SECONDS=${POLLING_INTERVAL_SECONDS:-15}
+      - POLLING_INTERVAL_SECONDS=${POLLING_INTERVAL_SECONDS:-30}
       - EXPORTER_PORT=${EXPORTER_PORT:-9100}
       - EMHI_STATION=${EMHI_STATION:-Tallinn-Harku}
     networks:
