@@ -15,6 +15,7 @@ variable "site_installer_file" {
   type        = string
   description = "Site installer filename"
 }
+
 variable "vm_name" {
   default     = "monitoring"
   type        = string

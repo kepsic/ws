@@ -8,7 +8,6 @@ if [ -z $REALPATH ]; then
 fi
 # Set up constants
 SCRIPT_PATH=$(realpath $(dirname "$0"))
-TERRAFORM_CODE=$SCRIPT_PATH/terraform
 TERRAFORM=$(which terraform)
 AZ=$(which az)
 JQ=$(which jq)
@@ -24,23 +23,24 @@ fi
 
 # Hardcoded variable
 TERRAFORM_VERSION=0.14
+TF_PROVIDER=${TF_PROVIDER:-az}
 AZ_IMAGE_OFFER=${AZ_IMAGE_OFFER:-"0001-com-ubuntu-server-focal"}
 AZ_IMAGE_SKU=${AZ_IMAGE_SKU:-"20_04-lts"}
 AZ_IMAGE_PUBLISHER=${AZ_IMAGE_PUBLISHER:-"Canonical"}
 AZ_LOCATION=${AZ_LOCATION:-"northeurope"}
 AZ_VM_NAME=${AZ_VM_NAME:-"monitoring"}
-AZ_ADMIN_USER=${AZ_ADMIN_USER:-"az-user"}
+AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-not-set}
+AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-not-set}
+AWS_DEFAULT_REGION=${AWS_REGION:-eu-west-3}
+EMON_ADMIN_USER=${EMON_ADMIN_USER:-emon-user}
 AZ_IMAGE_VERSION=${AZ_IMAGE_VERSION:-"20.04.202110260"}
 TERRAFORM_CURRENT_VERSION=$(${TERRAFORM} version)
 TERRAFORM_VERSION_CHECK=$(echo ${TERRAFORM_CURRENT_VERSION}|grep ${TERRAFORM_VERSION})
-SETTINGS_DIR=${SCRIPT_PATH}/ansible/settings.d
-SETTINGS_FILE=${SETTINGS_DIR}/post-settings.sh
-RSA_DIR=${SETTINGS_DIR}/ssh_keys
-RSA_FILE=${RSA_DIR}/id_rsa_emon
 SITE_DOMAIN="tallinn.emon.ee"
 SITE_PATH="ansible/roles/emon/files/emon"
 SITE_ENV_FILE=$SITE_PATH/.env
-IAAC_HOME=/srv/data/ws/iaac
+IAC_HOME=/srv/data/ws/iac
+IAC=$(echo $SCRIPT_PATH|sed -e's/\/\.//')
 SITE_INSTALLER_FILE=$SCRIPT_PATH/ansible/ansible_site_installer.sh
 
 # Load env variables
@@ -55,37 +55,13 @@ export TF_VAR_image_offer=$AZ_IMAGE_OFFER
 export TF_VAR_image_sku=$AZ_IMAGE_SKU
 export TF_VAR_image_version=$AZ_IMAGE_VERSION
 export TF_VAR_image_publisher=$AZ_IMAGE_PUBLISHER
-export TF_VAR_admin_user=$AZ_ADMIN_USER
+export TF_VAR_admin_user=$EMON_ADMIN_USER
 export TF_VAR_site_installer_file=$SITE_INSTALLER_FILE
+export TF_VAR_aws_access_key=$AWS_ACCESS_KEY_ID
+export TF_VAR_aws_secret_key=$AWS_SECRET_ACCESS_KEY
+export TR_VAR_aws_region=$AWS_DEFAULT_REGION
 
-# Sanity checks
-if [ -z "$TERRAFORM" ]; then
-  echo "Missing terraform binary; I'm sorry, we cant continue!"
-  exit 200
-fi
-
-if [ -z "$TERRAFORM_VERSION_CHECK"  ]; then
-  echo "I'm sorry! This code is intended to use with $TERRAFORM_VERSION"
-  echo $TERRAFORM_CURRENT_VERSION
-  exit 201
-fi
-
-if [ -z "$AZ" ]; then
-  echo "Missing Azure CLI binary; I'm sorry, we cant continue!"
-  exit 202
-fi
-
-if [ -z "$JQ" ]; then
-  echo "Missing jq binary; I'm sorry, we cant continue!"
-  exit 203
-fi
-
-# Try to login if not
-az account show > /dev/null
-if [ $? -eq 1  ]; then
-    az login
-fi
-
+echo $TF_VAR_aws_access_key $TF_VAR_aws_secret_key $TR_VAR_aws_region
 
 # Enable xtrace if the DEBUG environment variable is set
 if [[ ${DEBUG-} =~ ^1|yes|true$ ]]; then
@@ -97,6 +73,41 @@ set -o errexit  # Exit on most errors (see the manual)
 set -o errtrace # Make sure any error trap is inherited
 set -o nounset  # Disallow expansion of unset variables
 set -o pipefail # Use last non-zero exit code in a pipeline
+
+# DESC: Validates required parameters
+# ARGS: null
+# OUTS: null
+function validate_requiments() {
+  # Sanity checks
+  if [ -z "$TERRAFORM" ]; then
+    echo "Missing terraform binary; I'm sorry, we cant continue!"
+    exit 200
+  fi
+
+#  if [ -z "$TERRAFORM_VERSION_CHECK"  ] || [[ $TF_PROVIDER == aws ]]; then
+#    echo "I'm sorry! This code is intended to use with $TERRAFORM_VERSION"
+#    echo $TERRAFORM_CURRENT_VERSION
+#    exit 201
+#  fi
+
+  if [ -z "$AZ" ] && [ "$TF_PROVIDER" == "az" ]; then
+    echo "Missing Azure CLI binary; I'm sorry, we cant continue!"
+    exit 202
+  fi
+
+  if  [ "$TF_PROVIDER" == "az" ]; then
+    # Try to login if not
+    az account show > /dev/null
+    if [ $? -eq 1  ]; then
+        az login
+    fi
+  fi
+
+  if [ -z "$JQ" ]; then
+    echo "Missing jq binary; I'm sorry, we cant continue!"
+    exit 203
+  fi
+}
 
 # DESC: Prints out verbose message if verbose is set
 # ARGS: Message
@@ -135,6 +146,7 @@ Usage:
      --plan                     Plan terrafrom code
      --apply                    Plan and apply terrafrom code
      --destroy                  Destroy all resources
+     --aws-provider             Execute code against aws
      -h|--help                  Displays this help
      -v|--verbose               Displays verbose output
 EOF
@@ -165,6 +177,11 @@ function parse_params() {
       export LOOKUP_AZ_IMAGE=true
       ;;
 
+    --aws-provider)
+      export TF_PROVIDER=aws
+      ;;
+
+
     -h | --help)
       script_usage
       exit 0
@@ -184,6 +201,7 @@ function parse_params() {
 # ARGS: None
 # OUTS: None
 function terraform_plan() {
+
   # Format code
   ${TERRAFORM} fmt
 
@@ -214,8 +232,8 @@ function prepare_settings() {
 
     if [ ! -f "${SETTINGS_FILE}" ]; then
           _dst_host=$(${TERRAFORM} output -raw public_ip)
-          _ssh_connection_params="-oStrictHostKeyChecking=no -oIdentitiesOnly=yes -i $RSA_FILE"
-          _ssh_connection_string=" ${AZ_ADMIN_USER}@$_dst_host $_ssh_connection_params"
+          _ssh_connection_params="-oStrictHostKeyChecking=no -oIdentitiesOnly=yes -oUserKnownHostsFile=/dev/null -i $RSA_FILE"
+          _ssh_connection_string=" ${EMON_ADMIN_USER}@$_dst_host $_ssh_connection_params"
           cat  > "${SETTINGS_DIR}"/vars.sh << SETTINGS
 #!/usr/bin/env bash
 export ssh="ssh ${_ssh_connection_string}"
@@ -240,9 +258,13 @@ else
 fi
 
 if [ -f $SCRIPT_PATH/$SITE_ENV_FILE ]; then
- scp $_ssh_connection_params $SCRIPT_PATH/$SITE_ENV_FILE ${AZ_ADMIN_USER}@$_dst_host:$IAAC_HOME/$SITE_ENV_FILE
- \$ssh "cd $IAAC_HOME/$SITE_PATH && echo '$IAAC_HOME/ansible/ansible_site_installer.sh && yes|./init-letsencrypt.sh' > init-site.sh"
- \$ssh "cd $IAAC_HOME/$SITE_PATH && sudo git stash && sudo git pull && sudo bash ./init-site.sh && rm -rf ./init-site.sh"
+  rsync -avz -e "ssh $_ssh_connection_params"  \
+  --exclude '$IAC/venv' \
+  --exclude '$IAC/terraform/$TF_PROVIDER/.terraform/*' \
+  --progress \
+  $IAC/* ${EMON_ADMIN_USER}@$_dst_host:$IAC_HOME
+ \$ssh "cd $IAC_HOME/$SITE_PATH && echo '$IAC_HOME/ansible/ansible_site_installer.sh && yes|./init-letsencrypt.sh' > init-site.sh"
+ \$ssh "cd $IAC_HOME/$SITE_PATH && sudo bash ./init-site.sh && rm -rf ./init-site.sh"
 else
   echo Without $SCRIPT_PATH/$SITE_ENV_FILE file this site is depricated!
   exit 200
@@ -265,17 +287,16 @@ function terraform_commit() {
 
   terraform_plan
 
+  sleep 15
   ## Create the resource
   ${TERRAFORM} apply -auto-approve
 
+  sleep 10
   ${TERRAFORM} refresh
 
   if [ -d ${SETTINGS_DIR} ]; then
     rm -rf ${SETTINGS_DIR}
   fi
-
-  # Perpare settings
-  prepare_settings
 
   ## View state file
   ${TERRAFORM} show
@@ -288,8 +309,38 @@ function terraform_commit() {
 # ARGS: None
 # OUTS: None
 function terraform_init() {
+
   verbose_msg "Init EMON Tallinn stack"
+  if [[ ${TF_PROVIDER} == aws ]] && [[ ${SCRIPT_INIT} == true ]]; then
+
+    if [ ! -d $TERRAFORM_CODE/terraform_init/S3/.terraform ] || [[ ${SCRIPT_INIT} == true ]]; then
+      echo "Init S3"
+      cd $TERRAFORM_CODE/terraform_init/S3
+      if [ ! -d $TERRAFORM_CODE/terraform_init/S3/.terraform ]; then
+        $TERRAFORM init
+        sleep 5
+        $TERRAFORM plan
+        sleep 30
+        $TERRAFORM apply -auto-approve
+      fi
+    fi
+
+    if [ -d $TERRAFORM_CODE/terraform_init/DynamoDB/.terraform ] || [[ ${SCRIPT_INIT} == true ]]; then
+      echo "Init DynamoDB"
+      cd $TERRAFORM_CODE/terraform_init/DynamoDB
+      if [ ! -d $TERRAFORM_CODE/terraform_init/DynamoDB/.terraform ]; then
+        $TERRAFORM init
+        sleep 5
+        $TERRAFORM plan
+        sleep 30
+        $TERRAFORM apply -auto-approve
+      fi
+    fi
+
+  fi
+
   ## Initialize terraform
+  cd $TERRAFORM_CODE
   ${TERRAFORM} init
 
 }
@@ -298,6 +349,8 @@ function terraform_init() {
 # ARGS: None
 # OUTS: None
 function terraform_destroy() {
+
+  cd $TERRAFORM_CODE
   # Format code
   ${TERRAFORM} fmt
 
@@ -325,6 +378,15 @@ function main() {
 
   parse_params "$@"
 
+  export TERRAFORM_CODE=${SCRIPT_PATH}/terraform/${TF_PROVIDER}
+  export SETTINGS_DIR=${SCRIPT_PATH}/ansible/settings.d/${TF_PROVIDER}
+  export SETTINGS_FILE=${SETTINGS_DIR}/post-settings.sh
+  export RSA_DIR=${SETTINGS_DIR}/ssh_keys
+  export RSA_FILE=${RSA_DIR}/id_rsa_emon
+
+
+  validate_requiments
+
   cd  "${TERRAFORM_CODE}"
 
   if [ ! -d "${TERRAFORM_CODE}"/.terraform ]; then
@@ -338,16 +400,21 @@ function main() {
   fi
 
   if [ "${SCRIPT_COMMIT}" == "true" ]; then
+    cd $TERRAFORM_CODE
     terraform_commit
+    # Perpare settings
+    prepare_settings
     exit 0
   fi
 
   if [ "${SCRIPT_PLAN}" == "true" ]; then
+    cd $TERRAFORM_CODE
     terraform_plan
     exit 0
   fi
 
   if [ "${SCRIPT_DESTROY}" == "true" ]; then
+    cd $TERRAFORM_CODE
     terraform_destroy
     exit 0
   fi
