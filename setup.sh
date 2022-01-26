@@ -355,7 +355,7 @@ function terraform_destroy() {
   ${TERRAFORM} fmt
 
   # Destroy the resources
-  ${TERRAFORM} destroy
+  ${TERRAFORM} destroy -lock=false
 
   if [ -f "${RSA_FILE}" ]; then
     rm -rf "${RSA_FILE}"*
