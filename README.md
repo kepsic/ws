@@ -1,7 +1,7 @@
 # Emon Tallinn weather station
 ## What it is?
 
-This is a demonstration Observability stack in AZ as IAC. 
+This is a demonstration Observability stack in AZ (or AWS) as IAC. 
 Its collects Ilmateenistus API wheather stations metrics into Prometheus and visalises it with Graphana
 
 ## How to access
