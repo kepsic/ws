@@ -1,8 +1,8 @@
 # Emon Tallinn weather station
 ## What it is?
 
-This is a demonstration Observability stack in AZ as IAAC. 
-Its collects Tallinn-Harku wheather station metrics into Prometheus and visalises it with Graphana
+This is a demonstration Observability stack in AZ as IAC. 
+Its collects Ilmateenistus API wheather stations metrics into Prometheus and visalises it with Graphana
 
 ## How to access
 
@@ -29,6 +29,10 @@ PS! It's using LE STAGING certificates.
 * AZ cli
 
 ## How to use it
+
+* Terrafrom provider
+   Default provider is AZ. 
+   To use AWS provider append `--aws-provider`
 
 * Fill the .env file
   ``cp .env_example .env``
